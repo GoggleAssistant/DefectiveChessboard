@@ -58,6 +58,8 @@ public class DefectiveChessboardGUI extends JFrame {
             boardPanel.removeAll();
             boardPanel.setLayout(new GridLayout(size, size));
 
+            // Generate colors
+            Color[] palette = generateColorPalette(1400); // safe upper limit
 
             for (int r = 0; r < size; r++) {
                 for (int c = 0; c < size; c++) {
@@ -70,7 +72,7 @@ public class DefectiveChessboardGUI extends JFrame {
                         cell.setBackground(Color.BLACK);
                         cell.setForeground(Color.WHITE);
                     } else {
-                        cell.setBackground(Color.RED);
+                        cell.setBackground(palette[val % palette.length]);
                     }
 
                     cell.setBorder(BorderFactory.createLineBorder(Color.GRAY));
@@ -89,6 +91,28 @@ public class DefectiveChessboardGUI extends JFrame {
     private boolean isPowerOfTwo(int x) {
         return (x & (x - 1)) == 0 && x > 0;
     }
+
+    private Color[] generateColorPalette(int count) {
+        Color[] fixedColors = new Color[] {
+            Color.RED,         // 0
+            Color.ORANGE,      // 1
+            Color.YELLOW,      // 2
+            Color.GREEN,       // 3
+            Color.CYAN,        // 4
+            Color.BLUE,        // 5
+            Color.MAGENTA,     // 6
+            Color.PINK,        // 7
+            new Color(139, 69, 19), // 8 - Brown
+            Color.DARK_GRAY         // 9
+        };
+
+        Color[] colors = new Color[count];
+        for (int i = 0; i < count; i++) {
+            colors[i] = fixedColors[i % 10];
+        }
+        return colors;
+    }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(DefectiveChessboardGUI::new);
