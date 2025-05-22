@@ -7,7 +7,7 @@ public class DefectiveChessboardGUI extends JFrame {
     private JSlider sizeSlider;
     private JPanel boardPanel;
     private int defectiveRow = -1, defectiveCol = -1;
-    private final int[] sizes = {2, 4, 8, 16, 32};
+    private final int[] sizes = {2, 4, 8, 16, 32, 64};
     private JButton[][] buttons;
 
     public DefectiveChessboardGUI() {

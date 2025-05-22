@@ -1,124 +1,105 @@
-import java.util.Scanner;
-
 public class DefectiveChessboardTiling {
+    private static int tileId = 1;  // global tile counter
 
-    private static final int[][][] TROMINO_SHAPES = {
-        {{0, 0}, {0, 1}, {1, 0}}, // ┌
-        {{0, 0}, {0, 1}, {1, 1}}, // ┐
-        {{0, 0}, {1, 0}, {1, 1}}, // └
-        {{0, 0}, {1, 0}, {1, -1}} // ┘
-    };
-
-    private static boolean isValid(int[][] board, int r, int c, int[][] shape, int size) {
-        for (int[] offset : shape) {
-            int nr = r + offset[0];
-            int nc = c + offset[1];
-            if (nr < 0 || nr >= size || nc < 0 || nc >= size || board[nr][nc] != 0)
-                return false;
-        }
-        return true;
-    }
-
-    private static void place(int[][] board, int r, int c, int[][] shape, int tileId) {
-        for (int[] offset : shape) {
-            board[r + offset[0]][c + offset[1]] = tileId;
-        }
-    }
-
-    private static void removeL(int[][] board, int r, int c, int[][] shape) {
-        for (int[] offset : shape) {
-            board[r + offset[0]][c + offset[1]] = 0;
-        }
-    }
-
-    private static boolean findNext0(int[][] board, int size, int[] out) {
-        for (int r = 0; r < size; ++r) {
-            for (int c = 0; c < size; ++c) {
-                if (board[r][c] == 0) {
-                    out[0] = r;
-                    out[1] = c;
-                    return true;
+    /**
+     * Recursive tiling function:
+     * topRow, leftCol: top-left corner of current sub-board
+     * defectRow, defectCol: coordinates of defective cell inside current sub-board
+     * size: length of sub-board (power of 2)
+     * board: the board array to fill
+     */
+    private static void tile(int topRow, int leftCol, int defectRow, int defectCol, int size, int[][] board) {
+        if (size == 2) {
+            // Base case 2x2 board: fill 3 squares with current tileId, skip defective
+            for (int r = topRow; r < topRow + size; r++) {
+                for (int c = leftCol; c < leftCol + size; c++) {
+                    if (r != defectRow || c != defectCol) {
+                        board[r][c] = tileId;
+                    }
                 }
             }
+            tileId++;
+            return;
         }
-        return false;
+
+        int half = size / 2;
+
+        // Identify which quadrant the defect is in:
+        // 0: top-left, 1: top-right, 2: bottom-left, 3: bottom-right
+        int quad = 0;
+        if (defectRow < topRow + half) {
+            if (defectCol < leftCol + half) quad = 0;
+            else quad = 1;
+        } else {
+            if (defectCol < leftCol + half) quad = 2;
+            else quad = 3;
+        }
+
+        // Place center DefectiveChessboard covering the center cells of the 3 quadrants WITHOUT the defect
+        // The positions of the center cells depend on quadrant:
+        // center cells coordinates:
+        // top-left quadrant center: (topRow+half-1, leftCol+half-1)
+        // top-right quadrant center: (topRow+half-1, leftCol+half)
+        // bottom-left quadrant center: (topRow+half, leftCol+half-1)
+        // bottom-right quadrant center: (topRow+half, leftCol+half)
+
+        // Put a tile in these 3 center squares (excluding the quadrant with defect)
+        int centerRow = topRow + half - 1;
+        int centerCol = leftCol + half - 1;
+
+        // Place the tileId on three center squares
+        if (quad != 0) board[centerRow][centerCol] = tileId;
+        if (quad != 1) board[centerRow][centerCol + 1] = tileId;
+        if (quad != 2) board[centerRow + 1][centerCol] = tileId;
+        if (quad != 3) board[centerRow + 1][centerCol + 1] = tileId;
+
+        int currentTileId = tileId;
+        tileId++;
+
+        // Recurse on 4 quadrants with correct defect positions:
+        // For the quadrant with the actual defect, keep defectRow, defectCol as is
+        // For others, defect is at center cell where we placed tileId
+
+        // top-left quadrant
+        tile(topRow, leftCol,
+            (quad == 0) ? defectRow : centerRow,
+            (quad == 0) ? defectCol : centerCol,
+            half, board);
+
+        // top-right quadrant
+        tile(topRow, leftCol + half,
+            (quad == 1) ? defectRow : centerRow,
+            (quad == 1) ? defectCol : centerCol + 1,
+            half, board);
+
+        // bottom-left quadrant
+        tile(topRow + half, leftCol,
+            (quad == 2) ? defectRow : centerRow + 1,
+            (quad == 2) ? defectCol : centerCol,
+            half, board);
+
+        // bottom-right quadrant
+        tile(topRow + half, leftCol + half,
+            (quad == 3) ? defectRow : centerRow + 1,
+            (quad == 3) ? defectCol : centerCol + 1,
+            half, board);
     }
 
-    private static boolean tileBoard(int[][] board, int size, int tileId) {
-        int[] pos = new int[2];
-        if (!findNext0(board, size, pos)) {
-            return true;
-        }
-
-        int r = pos[0];
-        int c = pos[1];
-
-        for (int[][] shape : TROMINO_SHAPES) {
-            if (isValid(board, r, c, shape, size)) {
-                place(board, r, c, shape, tileId);
-                if (tileBoard(board, size, tileId + 1)) {
-                    return true;
-                }
-                removeL(board, r, c, shape);
-            }
-        }
-
-        return false;
-    }
-
+    /**
+     * Main method called by GUI or console:
+     * n = board size (power of 2)
+     * missing = defective cell coordinate [row, col]
+     */
     public static int[][] tiling(int n, int[] missing) {
+        tileId = 1;
         int[][] board = new int[n][n];
+
+        // Mark defective cell as -1
         board[missing[0]][missing[1]] = -1;
 
-        if (tileBoard(board, n, 1))
-            return board;
+        // Start recursion
+        tile(0, 0, missing[0], missing[1], n, board);
 
-        return new int[][]{{-1}};
-    }
-
-    public static boolean isPowerOfTwo(int x) {
-        return x > 0 && (x & (x - 1)) == 0;
-    }
-
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-
-        // Get size of board from user
-        System.out.print("Enter board size (must be power of 2, e.g. 2, 4, 8...): ");
-        int n = scanner.nextInt();
-
-        while (!isPowerOfTwo(n)) {
-            System.out.print("Invalid size. Enter a power of 2: ");
-            n = scanner.nextInt();
-        }
-
-        // Get defective square from user
-        System.out.print("Enter row of defective square (0 to " + (n - 1) + "): ");
-        int row = scanner.nextInt();
-
-        System.out.print("Enter column of defective square (0 to " + (n - 1) + "): ");
-        int col = scanner.nextInt();
-
-        while (row < 0 || row >= n || col < 0 || col >= n) {
-            System.out.println("Invalid index. Try again.");
-            System.out.print("Row: ");
-            row = scanner.nextInt();
-            System.out.print("Col: ");
-            col = scanner.nextInt();
-        }
-
-        int[] missing = {row, col};
-
-        int[][] grid = tiling(n, missing);
-
-        System.out.println("\nDefective Chessboard Solution:");
-        for (int[] line : grid) {
-            for (int val : line) {
-                System.out.printf("%3d", val);
-            }
-            System.out.println();
-        }
-
-        scanner.close();
+        return board;
     }
 }
